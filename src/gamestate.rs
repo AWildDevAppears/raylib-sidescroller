@@ -1,11 +1,10 @@
-use std::os::unix::thread;
+use std::cmp::max;
 
 use raylib::{
     RaylibHandle, RaylibThread,
     camera::Camera2D,
     drawing::{RaylibDraw, RaylibDrawHandle},
     ffi::{Color, KeyboardKey, Rectangle, Vector2},
-    math::lerp,
     texture::Texture2D,
 };
 use tiled::{Layer, Loader};
@@ -52,10 +51,12 @@ impl GameState {
             game_name: "Boilerplate".to_string(),
             layers: vec![],
             texture: None,
-            player: PlayerModel::new(Vector2 {
+            player: PlayerModel::new(Rectangle {
                 x: 0.0,
                 y: screen_height as f32 - (8.0 * 32.0), // TODO: Calculate this position from the
-                                                        // map.
+                // map.
+                width: 32.0,
+                height: 32.0,
             }),
             camera: Camera2D {
                 offset: Vector2 { x: 0.0, y: 0.0 },
@@ -74,33 +75,60 @@ impl GameState {
 
     pub fn update(&mut self, game: &mut RaylibHandle) {
         if game.is_key_down(KeyboardKey::KEY_D) {
-            self.player.velocity = Vector2 {
-                x: lerp(self.player.velocity.x, self.player.max_velocity.x, 1.0),
-                y: self.player.velocity.y,
-            };
-        }
-
-        if game.is_key_down(KeyboardKey::KEY_A) {
-            self.player.velocity = Vector2 {
-                x: lerp(self.player.velocity.x, -self.player.max_velocity.x, 1.0),
-                y: self.player.velocity.y,
-            }
+            self.player.velocity.x = (self.player.velocity.x + self.player.accelleration)
+                .min(self.player.max_velocity.x);
+        } else if game.is_key_down(KeyboardKey::KEY_A) {
+            self.player.velocity.x = (self.player.velocity.x - self.player.accelleration)
+                .max(-self.player.max_velocity.x);
+        } else {
+            self.player.velocity.x = 0.0;
         }
 
         // TODO: Jump
 
-        self.player.position += self.player.velocity;
-        self.player.velocity = Vector2 { x: 0.0, y: 0.0 };
-
-        // TODO: Camera chase
+        // TODO: Camera bounds
         self.camera.target = Vector2 {
-            x: self.player.position.x - (self.screen_width as f32 / 2.0),
+            x: self.player.bounds.x - (self.screen_width as f32 / 2.0),
             y: 0.0,
         };
 
         // TODO: Camera bounds for side walls
 
-        // TODO: Collision groups
+        self.player.bounds.x += self.player.velocity.x;
+
+        'x_loop: for (_group, layer) in &self.layers {
+            for call in layer {
+                if let Some(_overlap) = self.player.bounds.get_collision_rec(call.dest) {
+                    if self.player.velocity.x > 0.0 {
+                        self.player.bounds.x = call.dest.x - self.player.bounds.width;
+                        self.player.velocity.x = 0.0;
+                        break 'x_loop;
+                    } else if self.player.velocity.x < 0.0 {
+                        self.player.bounds.x = call.dest.x + call.dest.width;
+                        self.player.velocity.x = 0.0;
+                        break 'x_loop;
+                    }
+                }
+            }
+        }
+
+        self.player.bounds.y += self.player.velocity.y;
+
+        'y_loop: for (_group, layer) in &self.layers {
+            for call in layer {
+                if let Some(_overlap) = self.player.bounds.get_collision_rec(call.dest) {
+                    if self.player.velocity.y > 0.0 {
+                        self.player.bounds.y = call.dest.y - self.player.bounds.height;
+                        self.player.velocity.y = 0.0;
+                        break 'y_loop;
+                    } else if self.player.velocity.y < 0.0 {
+                        self.player.bounds.y = call.dest.y + call.dest.height;
+                        self.player.velocity.y = 0.0;
+                        break 'y_loop;
+                    }
+                }
+            }
+        }
     }
 
     pub fn draw(&self, draw: &mut RaylibDrawHandle) {
@@ -119,9 +147,10 @@ impl GameState {
             }
         }
 
-        draw.draw_rectangle_v(
-            self.player.position,
-            Vector2 { x: 32.0, y: 32.0 },
+        draw.draw_rectangle_pro(
+            self.player.bounds,
+            Vector2 { x: 0.0, y: 0.0 },
+            0.0,
             Color::YELLOW,
         );
     }
