@@ -75,20 +75,19 @@ impl GameState {
 
     pub fn update(&mut self, game: &mut RaylibHandle) {
         if game.is_key_down(KeyboardKey::KEY_D) {
-            self.player.velocity.x = (self.player.velocity.x + self.player.accelleration)
-                .min(self.player.max_velocity.x);
+            self.player.move_right();
         } else if game.is_key_down(KeyboardKey::KEY_A) {
-            self.player.velocity.x = (self.player.velocity.x - self.player.accelleration)
-                .max(-self.player.max_velocity.x);
+            self.player.move_left();
         } else {
-            self.player.velocity.x = if self.player.velocity.x > 0.0 {
-                (self.player.velocity.x - self.player.accelleration_taper).max(0.0)
-            } else {
-                (self.player.velocity.x + self.player.accelleration_taper).min(0.0)
-            };
+            self.player.decelerate_x();
         }
 
-        // TODO: Jump
+        if game.is_key_pressed(KeyboardKey::KEY_SPACE) && !self.player.is_airborne {
+            self.player.is_airborne = true;
+            self.player.velocity.y = -200.0;
+        } else {
+            self.player.velocity.y = 1.0;
+        }
 
         // TODO: Camera bounds
         self.camera.target = Vector2 {
@@ -124,6 +123,7 @@ impl GameState {
                     if self.player.velocity.y > 0.0 {
                         self.player.bounds.y = call.dest.y - self.player.bounds.height;
                         self.player.velocity.y = 0.0;
+                        self.player.is_airborne = false;
                         break 'y_loop;
                     } else if self.player.velocity.y < 0.0 {
                         self.player.bounds.y = call.dest.y + call.dest.height;
