@@ -4,7 +4,10 @@
 mod gamestate;
 mod models;
 
-use raylib::{drawing::RaylibDraw, ffi::Color};
+use raylib::{
+    drawing::{RaylibDraw, RaylibMode2DExt},
+    ffi::Color,
+};
 
 use crate::gamestate::GameState;
 
@@ -21,10 +24,12 @@ fn main() {
     while !game.window_should_close() {
         state.update(&mut game);
 
-        let mut draw = game.begin_drawing(&thread);
+        game.draw(&thread, |mut d| {
+            d.clear_background(Color::WHITE);
 
-        draw.clear_background(Color::WHITE);
-
-        state.draw(&mut draw);
+            d.draw_mode2D(state.camera, |mut draw| {
+                state.draw(&mut draw);
+            });
+        });
     }
 }

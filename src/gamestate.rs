@@ -2,14 +2,15 @@ use std::os::unix::thread;
 
 use raylib::{
     RaylibHandle, RaylibThread,
+    camera::Camera2D,
     drawing::{RaylibDraw, RaylibDrawHandle},
-    ffi::{CSSPalette, Color, KeyboardKey, Rectangle, Vector2},
+    ffi::{Color, KeyboardKey, Rectangle, Vector2},
     math::lerp,
     texture::Texture2D,
 };
 use tiled::{Layer, Loader};
 
-use crate::{gamestate::MapLayers::Background, models::player_model::PlayerModel};
+use crate::models::player_model::PlayerModel;
 
 /**
 * Copyright (c) AWildDevAppears
@@ -27,6 +28,7 @@ pub struct GameState {
     pub layers: Vec<(MapLayers, Vec<DrawCall>)>,
     pub texture: Option<Texture2D>,
     pub player: PlayerModel,
+    pub camera: Camera2D,
 }
 
 pub enum MapLayers {
@@ -55,6 +57,12 @@ impl GameState {
                 y: screen_height as f32 - (8.0 * 32.0), // TODO: Calculate this position from the
                                                         // map.
             }),
+            camera: Camera2D {
+                offset: Vector2 { x: 0.0, y: 0.0 },
+                target: Vector2 { x: 0.0, y: 0.0 },
+                rotation: 0.0,
+                zoom: 1.0,
+            },
         }
     }
 
@@ -65,12 +73,11 @@ impl GameState {
     }
 
     pub fn update(&mut self, game: &mut RaylibHandle) {
-        // TODO: LERPed velocity
         if game.is_key_down(KeyboardKey::KEY_D) {
             self.player.velocity = Vector2 {
                 x: lerp(self.player.velocity.x, self.player.max_velocity.x, 1.0),
                 y: self.player.velocity.y,
-            }
+            };
         }
 
         if game.is_key_down(KeyboardKey::KEY_A) {
@@ -86,6 +93,12 @@ impl GameState {
         self.player.velocity = Vector2 { x: 0.0, y: 0.0 };
 
         // TODO: Camera chase
+        self.camera.target = Vector2 {
+            x: self.player.position.x - (self.screen_width as f32 / 2.0),
+            y: 0.0,
+        };
+
+        // TODO: Camera bounds for side walls
 
         // TODO: Collision groups
     }
