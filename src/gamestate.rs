@@ -81,7 +81,11 @@ impl GameState {
             self.player.velocity.x = (self.player.velocity.x - self.player.accelleration)
                 .max(-self.player.max_velocity.x);
         } else {
-            self.player.velocity.x = 0.0;
+            self.player.velocity.x = if self.player.velocity.x > 0.0 {
+                (self.player.velocity.x - self.player.accelleration_taper).max(0.0)
+            } else {
+                (self.player.velocity.x + self.player.accelleration_taper).min(0.0)
+            };
         }
 
         // TODO: Jump
