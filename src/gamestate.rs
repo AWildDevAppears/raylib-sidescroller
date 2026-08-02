@@ -9,7 +9,7 @@ use raylib::{
 };
 use tiled::{Layer, Loader};
 
-use crate::models::player_model::PlayerModel;
+use crate::{constants::CONSTANT_GRAVITY, models::player_model::PlayerModel};
 
 /**
 * Copyright (c) AWildDevAppears
@@ -82,12 +82,24 @@ impl GameState {
             self.player.decelerate_x();
         }
 
-        if game.is_key_pressed(KeyboardKey::KEY_SPACE) && !self.player.is_airborne {
-            self.player.is_airborne = true;
-            self.player.velocity.y = -200.0;
-        } else {
-            self.player.velocity.y = 1.0;
+        if game.is_key_pressed(KeyboardKey::KEY_SPACE) && self.player.is_grounded {
+            self.player.velocity.y = -1.25;
+            self.player.is_grounded = false;
         }
+
+        if game.is_key_released(KeyboardKey::KEY_SPACE) && self.player.velocity.y < 0.0 {
+            self.player.velocity.y *= 0.5;
+        }
+
+        let current_gravity = if self.player.velocity.y.abs() < 1.5 && !self.player.is_grounded {
+            CONSTANT_GRAVITY * 0.5
+        } else if self.player.velocity.y > 0.0 {
+            CONSTANT_GRAVITY * self.player.fall_gravity_mult
+        } else {
+            CONSTANT_GRAVITY
+        };
+
+        self.player.velocity.y += current_gravity;
 
         // TODO: Camera bounds
         self.camera.target = Vector2 {
@@ -123,7 +135,7 @@ impl GameState {
                     if self.player.velocity.y > 0.0 {
                         self.player.bounds.y = call.dest.y - self.player.bounds.height;
                         self.player.velocity.y = 0.0;
-                        self.player.is_airborne = false;
+                        self.player.is_grounded = true;
                         break 'y_loop;
                     } else if self.player.velocity.y < 0.0 {
                         self.player.bounds.y = call.dest.y + call.dest.height;

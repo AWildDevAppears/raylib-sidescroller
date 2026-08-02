@@ -9,7 +9,8 @@ pub struct PlayerModel {
     pub max_velocity: Vector2,
     pub acceleration: f32,
     pub acceleration_taper: f32,
-    pub is_airborne: bool,
+    pub is_grounded: bool,
+    pub fall_gravity_mult: f32,
 }
 
 impl PlayerModel {
@@ -18,9 +19,10 @@ impl PlayerModel {
             bounds,
             velocity: Vector2 { x: 0.0, y: 0.0 },
             max_velocity: Vector2 { x: 1.0, y: 1.0 },
-            acceleration: 0.3,
+            acceleration: 0.2,
             acceleration_taper: 0.1,
-            is_airborne: false,
+            is_grounded: false,
+            fall_gravity_mult: 1.0,
         }
     }
 
