@@ -87,8 +87,18 @@ impl GameState {
             self.player.is_grounded = false;
         }
 
-        if game.is_key_released(KeyboardKey::KEY_SPACE) && self.player.velocity.y < 0.0 {
+        if game.is_key_released(KeyboardKey::KEY_SPACE)
+            && self.player.velocity.y < 0.0
+            && !self.player.is_double_jumping
+        {
             self.player.velocity.y *= 0.5;
+            self.player.can_double_jump = true;
+        }
+
+        if game.is_key_pressed(KeyboardKey::KEY_SPACE) && self.player.can_double_jump {
+            self.player.can_double_jump = false;
+            self.player.is_double_jumping = true;
+            self.player.velocity.y = -1.25;
         }
 
         let current_gravity = if self.player.velocity.y.abs() < 1.5 && !self.player.is_grounded {
@@ -136,6 +146,7 @@ impl GameState {
                         self.player.bounds.y = call.dest.y - self.player.bounds.height;
                         self.player.velocity.y = 0.0;
                         self.player.is_grounded = true;
+                        self.player.is_double_jumping = false;
                         break 'y_loop;
                     } else if self.player.velocity.y < 0.0 {
                         self.player.bounds.y = call.dest.y + call.dest.height;

@@ -11,6 +11,8 @@ pub struct PlayerModel {
     pub acceleration_taper: f32,
     pub is_grounded: bool,
     pub fall_gravity_mult: f32,
+    pub can_double_jump: bool,
+    pub is_double_jumping: bool,
 }
 
 impl PlayerModel {
@@ -23,6 +25,8 @@ impl PlayerModel {
             acceleration_taper: 0.1,
             is_grounded: false,
             fall_gravity_mult: 1.0,
+            can_double_jump: false,
+            is_double_jumping: false,
         }
     }
 
