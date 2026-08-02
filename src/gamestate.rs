@@ -82,9 +82,8 @@ impl GameState {
 
         self.player.velocity.y += current_gravity;
 
-        // TODO: Camera bounds
         self.camera.target = Vector2 {
-            x: self.player.bounds.x - (self.screen_width as f32 / 2.0),
+            x: (self.player.bounds.x - (self.screen_width as f32 / 2.0)).round(),
             y: 0.0,
         };
 
