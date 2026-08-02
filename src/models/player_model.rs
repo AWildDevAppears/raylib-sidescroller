@@ -3,6 +3,12 @@
 */
 use raylib::ffi::{Rectangle, Vector2};
 
+#[repr(u8)]
+pub enum MovementX {
+    LEFT,
+    RIGHT,
+}
+
 pub struct PlayerModel {
     pub bounds: Rectangle,
     pub velocity: Vector2,
@@ -30,12 +36,11 @@ impl PlayerModel {
         }
     }
 
-    pub fn move_left(&mut self) {
-        self.velocity.x = (self.velocity.x - self.acceleration).max(-self.max_velocity.x);
-    }
-
-    pub fn move_right(&mut self) {
-        self.velocity.x = (self.velocity.x + self.acceleration).min(self.max_velocity.x);
+    pub fn move_x(&mut self, direction: MovementX) {
+        match direction {
+            MovementX::LEFT => self.move_left(),
+            MovementX::RIGHT => self.move_right(),
+        }
     }
 
     pub fn decelerate_x(&mut self) {
@@ -44,5 +49,37 @@ impl PlayerModel {
         } else {
             (self.velocity.x + self.acceleration_taper).min(0.0)
         };
+    }
+
+    pub fn handle_jump_pressed(&mut self, jumped: bool) {
+        if jumped {
+            if self.is_grounded {
+                self.velocity.y = -1.25;
+                self.is_grounded = false;
+            }
+
+            if self.can_double_jump {
+                self.can_double_jump = false;
+                self.is_double_jumping = true;
+                self.velocity.y = -1.25;
+            }
+        }
+    }
+
+    pub fn handle_jump_released(&mut self, released: bool) {
+        if released {
+            if self.velocity.y < 0.0 && !self.is_double_jumping {
+                self.velocity.y *= 0.5;
+                self.can_double_jump = true;
+            }
+        }
+    }
+
+    fn move_left(&mut self) {
+        self.velocity.x = (self.velocity.x - self.acceleration).max(-self.max_velocity.x);
+    }
+
+    fn move_right(&mut self) {
+        self.velocity.x = (self.velocity.x + self.acceleration).min(self.max_velocity.x);
     }
 }

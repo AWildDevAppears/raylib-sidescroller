@@ -1,5 +1,6 @@
-use std::cmp::max;
-
+/**
+* Copyright (c) AWildDevAppears
+*/
 use raylib::{
     RaylibHandle, RaylibThread,
     camera::Camera2D,
@@ -7,18 +8,12 @@ use raylib::{
     ffi::{Color, KeyboardKey, Rectangle, Vector2},
     texture::Texture2D,
 };
-use tiled::{Layer, Loader};
 
-use crate::{constants::CONSTANT_GRAVITY, models::player_model::PlayerModel};
-
-/**
-* Copyright (c) AWildDevAppears
-*/
-
-pub struct DrawCall {
-    pub source: Rectangle,
-    pub dest: Rectangle,
-}
+use crate::{
+    constants::CONSTANT_GRAVITY,
+    handlers::map_handler::{DrawCall, MapLayers, load_map, load_texture},
+    models::player_model::{MovementX, PlayerModel},
+};
 
 pub struct GameState {
     pub screen_width: i32,
@@ -28,16 +23,6 @@ pub struct GameState {
     pub texture: Option<Texture2D>,
     pub player: PlayerModel,
     pub camera: Camera2D,
-}
-
-pub enum MapLayers {
-    Unbound,
-    Floor,
-    Background,
-    Flag,
-    Bricks,
-    Pipes,
-    PowerBlocks,
 }
 
 impl GameState {
@@ -68,38 +53,24 @@ impl GameState {
     }
 
     pub fn preload(&mut self, game: &mut RaylibHandle, thread: &RaylibThread) {
-        self.load_map();
-
-        self.texture = Some(self.load_texture(game, thread));
+        self.layers = load_map();
+        self.texture = Some(load_texture(game, thread));
     }
 
     pub fn update(&mut self, game: &mut RaylibHandle) {
         if game.is_key_down(KeyboardKey::KEY_D) {
-            self.player.move_right();
+            self.player.move_x(MovementX::RIGHT);
         } else if game.is_key_down(KeyboardKey::KEY_A) {
-            self.player.move_left();
+            self.player.move_x(MovementX::LEFT);
         } else {
             self.player.decelerate_x();
         }
 
-        if game.is_key_pressed(KeyboardKey::KEY_SPACE) && self.player.is_grounded {
-            self.player.velocity.y = -1.25;
-            self.player.is_grounded = false;
-        }
+        self.player
+            .handle_jump_pressed(game.is_key_pressed(KeyboardKey::KEY_SPACE));
 
-        if game.is_key_released(KeyboardKey::KEY_SPACE)
-            && self.player.velocity.y < 0.0
-            && !self.player.is_double_jumping
-        {
-            self.player.velocity.y *= 0.5;
-            self.player.can_double_jump = true;
-        }
-
-        if game.is_key_pressed(KeyboardKey::KEY_SPACE) && self.player.can_double_jump {
-            self.player.can_double_jump = false;
-            self.player.is_double_jumping = true;
-            self.player.velocity.y = -1.25;
-        }
+        self.player
+            .handle_jump_released(game.is_key_released(KeyboardKey::KEY_SPACE));
 
         let current_gravity = if self.player.velocity.y.abs() < 1.5 && !self.player.is_grounded {
             CONSTANT_GRAVITY * 0.5
@@ -180,89 +151,5 @@ impl GameState {
             0.0,
             Color::YELLOW,
         );
-    }
-
-    fn load_texture(&self, game: &mut RaylibHandle, thread: &RaylibThread) -> Texture2D {
-        game.load_texture(thread, "assets/28-touch.png")
-            .expect("Failed to load textures")
-    }
-
-    fn load_map(&mut self) {
-        let mut loader = Loader::new();
-
-        let map = match loader.load_tmx_map("assets/level-one.tmx") {
-            Ok(m) => m,
-            Err(e) => panic!("{}", e),
-        };
-        let tile_width = map.tile_width as f32;
-        let tile_height = map.tile_height as f32;
-
-        let mut layers = vec![];
-
-        for (_, m) in map.layers().enumerate() {
-            println!("{:?}", m.name);
-
-            let name = match m.name.as_str() {
-                "floor" => MapLayers::Floor,
-                "background" => MapLayers::Background,
-                "flag" => MapLayers::Flag,
-                "bricks" => MapLayers::Bricks,
-                "pipes" => MapLayers::Pipes,
-                "power_blocks" => MapLayers::PowerBlocks,
-                _ => MapLayers::Unbound,
-            };
-
-            layers.push((
-                name,
-                self.parse_layer(m, (map.width, map.height), (tile_width, tile_height)),
-            ));
-        }
-
-        self.layers = layers;
-    }
-
-    fn parse_layer(
-        &self,
-        layer: Layer<'_>,
-        size: (u32, u32),
-        tile_size: (f32, f32),
-    ) -> Vec<DrawCall> {
-        let (width, height) = size;
-        let (tile_width, tile_height) = tile_size;
-
-        let mut rects = Vec::new();
-        if let Some(tile_layer) = layer.as_tile_layer() {
-            for x in 0..width {
-                for y in 0..height {
-                    if let Some(layer_tile) = tile_layer.get_tile(x as i32, y as i32) {
-                        if let Some(tile) = layer_tile.get_tile() {
-                            let tileset = tile.tileset();
-                            let tile_id = layer_tile.id();
-                            let columns = tileset.columns;
-
-                            let src_x = (tile_id % columns) * tileset.tile_width;
-                            let src_y = (tile_id / columns) * tileset.tile_height;
-
-                            rects.push(DrawCall {
-                                source: Rectangle::new(
-                                    src_x as f32,
-                                    src_y as f32,
-                                    tile_width,
-                                    tile_height,
-                                ),
-                                dest: Rectangle::new(
-                                    x as f32 * tile_width,
-                                    y as f32 * tile_height,
-                                    tile_width,
-                                    tile_height,
-                                ),
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        rects
     }
 }

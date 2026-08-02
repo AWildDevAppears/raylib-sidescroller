@@ -3,6 +3,7 @@
 */
 mod constants;
 mod gamestate;
+mod handlers;
 mod models;
 
 use raylib::{
