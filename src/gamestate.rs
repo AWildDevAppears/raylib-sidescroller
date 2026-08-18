@@ -12,6 +12,7 @@ use raylib::{
 use crate::{
     constants::CONSTANT_GRAVITY,
     handlers::map_handler::{DrawCall, MapLayers, load_map, load_texture},
+    managers::asset_manager::{AssetManager, TextureReference},
     models::player_model::{MovementX, PlayerModel},
 };
 
@@ -20,9 +21,9 @@ pub struct GameState {
     pub screen_height: i32,
     pub game_name: String,
     pub layers: Vec<(MapLayers, Vec<DrawCall>)>,
-    pub texture: Option<Texture2D>,
     pub player: PlayerModel,
     pub camera: Camera2D,
+    pub asset_manager: Option<AssetManager>,
 }
 
 impl GameState {
@@ -35,7 +36,7 @@ impl GameState {
             screen_height,
             game_name: "Boilerplate".to_string(),
             layers: vec![],
-            texture: None,
+            asset_manager: None,
             player: PlayerModel::new(Rectangle {
                 x: 0.0,
                 y: screen_height as f32 - (8.0 * 32.0), // TODO: Calculate this position from the
@@ -54,7 +55,15 @@ impl GameState {
 
     pub fn preload(&mut self, game: &mut RaylibHandle, thread: &RaylibThread) {
         self.layers = load_map();
-        self.texture = Some(load_texture(game, thread));
+        self.asset_manager = Some(AssetManager::new(
+            game,
+            thread,
+            &[],
+            &[TextureReference::new_sheet(
+                "assets/28-touch.png".to_string(),
+                Vector2::new(32.0, 32.0),
+            )],
+        ));
     }
 
     pub fn update(&mut self, game: &mut RaylibHandle) {
@@ -129,7 +138,9 @@ impl GameState {
     }
 
     pub fn draw(&self, draw: &mut RaylibDrawHandle) {
-        if let Some(ref tex) = self.texture {
+        if let Some(ref mgr) = self.asset_manager {
+            let tex = mgr.get_texture(&"assets/28-touch.png".to_string());
+
             for (_variant, layer) in &self.layers {
                 for call in layer {
                     draw.draw_texture_pro(

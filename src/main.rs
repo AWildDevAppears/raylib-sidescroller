@@ -4,6 +4,7 @@
 mod constants;
 mod gamestate;
 mod handlers;
+mod managers;
 mod models;
 
 use raylib::{
